@@ -10,10 +10,13 @@ def calculate_bmi(weight, height):
 
 def get_diet_plan(gender, age, bmi, height, weight, goal, budget):
     llm = Ollama(model="deepseek-r1:1.5b")
-    prompt = (f"Create a diet plan for someone who wants to {goal} weight with a budget of {budget} "
-              f"INR per month with their basic detailes are Gender: "
-              f"{gender}, Age: {age}, BMI: {bmi}, Height: {height}, Weight: {weight}. "
-              f"The plan should have food, meals, nutrients, then calories, a full diet plan for the person. with excersice plans.")
+    prompt = (  f"Generate a structured diet and exercise plan for a {age}-year-old {gender} with a "
+                f"BMI of {bmi:.2f}, height {height} cm, and weight {weight} kg. "
+                f"The goal is to {goal} weight while staying within a budget of {budget} INR per month. "   
+                f"Include daily meal plans, nutritional breakdowns, calorie counts, and an exercise routine. "
+                f"Also, provide an estimated cost breakdown. Consider only indian environment, foods, currency."
+                f"Make sure the answer is simple, easy to understand and follow"
+                f"Imagine yourself as a personal trainer and please guide me.")
     res = ""
     temp =  llm.invoke(prompt)
     if "</think>" in temp:
@@ -32,8 +35,9 @@ def count_reps(exercise, landmarks):
         return landmarks[13].y > landmarks[11].y and landmarks[14].y > landmarks[12].y
     return False
 
-
+st.set_page_config(page_title="Personalized Fitness Guide", layout="wide")
 st.title("Personalized Fitness Guide")
+st.subheader("Please make sure you enter the correct information.")
 name = st.text_input("Enter your name")
 gender = st.selectbox("Select your gender", ["Male", "Female", "LGBTQ++ Ultra HD"])
 age = st.number_input("Enter your age", min_value=1, step=1)
@@ -56,9 +60,23 @@ budget = st.number_input("Enter your budget in INR", min_value=1000, step=100)
 
 plan = ""
 
+if "diet" not in st.session_state:
+    st.session_state.diet = ""
+
+if st.button("Get diet plan."):
+    with st.spinner(f"Please wait while we are making a perfect diet plan for you to {goal}"):
+        st.session_state.diet = get_diet_plan(gender, age, bmi, height, weight, goal, budget)
+st.text_area("Your Diet Plan", st.session_state.diet, height=600)
+
+"""
 if st.button("Get Diet Plan"):
-    plan = get_diet_plan(gender, age, bmi, height, weight, goal, budget)
+    with st.spinner("Please wait while we plan a perfect diet for you!"):
+        plan = get_diet_plan(gender, age, bmi, height, weight, goal, budget)
+        if plan:
+            st.success("Here is your diet.")
 st.write(plan)
+"""
+
 
 if st.button("Go to Exercise Tracker"):
     st.session_state.page = "exercise"
@@ -72,6 +90,7 @@ if "page" in st.session_state and st.session_state.page == "exercise":
     mpdraw = mp.solutions.drawing_utils
     count = 0
     prev_state = False
+    frame_window = st.image([])
 
     while cap.isOpened():
         success, img = cap.read()
@@ -89,7 +108,7 @@ if "page" in st.session_state and st.session_state.page == "exercise":
             prev_state = curr_state
 
         cv2.putText(img, f"Count: {count}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.imshow("Exercise", img)
+        frame_window.image(img, channels="BGR")
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     cap.release()
